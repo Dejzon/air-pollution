@@ -83,7 +83,7 @@ const LocationContextProvider = (props) => {
   const onMapLoad = React.useCallback((map) => {
     mapRef.current = map;
 
-    console.log(map)
+    console.log(map.formatted_address)
 
   }, []);
 
@@ -120,6 +120,8 @@ const LocationContextProvider = (props) => {
       marker.lat
     );
   })
+
+  
 
 
   let longitude = longitudeList[longitudeList.length - 1];
@@ -268,10 +270,13 @@ function Search({ panTo }) {
   const handleSelect = async (address) => {
     setValue(address, false);
     clearSuggestions();
-    console.log(address)
+
     try {
       const results = await getGeocode({ address });
       const { lat, lng } = await getLatLng(results[0]);
+      
+      
+   
 
       panTo({ lat, lng });
 
@@ -313,11 +318,12 @@ const AddLocation = ({ longitude, latitude }) => {
   const [error, setError] = useState();
 
   const [userLocation, setUserLocation] = useState([]);
+  const [placeName, setPlaceName] = useState(null)
 
 
   const submitHandler = event => {
     event.preventDefault();
-    addLocationHandler({ lon: longitude, lat: latitude });
+    addLocationHandler({ lon: longitude, lat: latitude, place: placeName });
 
   };
 
@@ -326,20 +332,51 @@ const AddLocation = ({ longitude, latitude }) => {
   }, [userLocation]);
 
   const filteredLocationHandler = useCallback(filteredLocation => {
+    
     setUserLocation(filteredLocation);
   }, []);
 
-  const addLocationHandler = location => {
+
+
+  async function getplaceName(lat, lng) {
+    try {
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&sensor=true&key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}`);
+      const data = await response.json();
+      console.log(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&sensor=true&key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}`)
+      console.log(data);
+      if (data.results.length > 0) {
+        console.log("ima nesto!!!")
+        setPlaceName(data.results[0].address_components[2].long_name)
+      }
+      else {
+        console.log("NEMA NISTA!!!!")
+        setPlaceName("Unknown Location")
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  console.log(placeName)
+
+
+
+
+
+  const addLocationHandler = (location) => {
     fetch('https://auth-hooks-dev-3ac29-default-rtdb.firebaseio.com/locations.json', {
       method: 'POST',
       body: JSON.stringify(location),
       headers: { 'Content-Type': 'application/json' }
     })
       .then(response => {
+        
         return response.json();
+
       })
       .then(responseData => {
         console.log(responseData)
+        getplaceName(latitude, longitude)
         setUserLocation(prevLocation => [
           ...prevLocation,
           { id: responseData.name, ...location }
@@ -372,6 +409,7 @@ const AddLocation = ({ longitude, latitude }) => {
         <ListSearch onLoadLocations={filteredLocationHandler} />
         <LocationList
           location={userLocation}
+         
           onRemoveItem={removeLocationHandler}
         />
         <div className="Location-form__actions">

@@ -10,6 +10,7 @@ const LocationList = props => {
           <li key={locationItem.id} onClick={props.onRemoveItem.bind(this, locationItem.id)}>
             <div>{locationItem.lon}</div>
             <div>{locationItem.lat}x</div>
+            <div>{locationItem.place}</div>
           </li>
         ))}
       </ul>
